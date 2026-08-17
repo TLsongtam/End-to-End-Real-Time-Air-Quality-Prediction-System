@@ -1,32 +1,55 @@
-# End-to-End-Real-Time-Air-Quality-Prediction-System
-## Overview
+# Real-Time Air Quality Forecasting System
 
+This project demonstrates a **real-time air quality streaming and PM2.5 forecasting pipeline** using Kafka, Spark, PyTorch, MongoDB Atlas, FastAPI, and Streamlit.
 
-An end-to-end real-time environmental monitoring and PM2.5 forecasting system developed for the **Online Stream Data Analysis (IE212)** course.
-
-The system simulates real-time air quality sensor data from **6 monitoring stations in Ho Chi Minh City**, streams the data through **Apache Kafka**, processes it using **Apache Spark Structured Streaming**, performs 24-hour PM2.5 forecasting using **BiLSTM-MLAM deep learning models**, stores real-time data and predictions in **MongoDB Atlas**, and provides interactive visualization through **Streamlit** and a **FastAPI** backend.
+The system simulates air quality data from **6 stations in Ho Chi Minh City**, streams it through Kafka, processes it with Spark Structured Streaming, generates **24-hour PM2.5 forecasts** using BiLSTM-MLAM models, stores results in MongoDB Atlas, and visualizes them through a Streamlit dashboard.
 
 ---
 
-##  System Architecture
+## Architecture
 
-![System Pipeline](fastapi_app/img/Pipeline.png)
+1. **Data Producer**
+   `spark_kafka/producer.py` reads simulated air quality data and sends records to the `air_quality` Kafka topic.
 
+2. **Kafka**
+   Acts as the real-time messaging layer between the producer and Spark.
 
----
+3. **Spark Streaming**
+   `spark_kafka/spark_consumer_mongodb.py` consumes Kafka data, maintains a **48-hour history window**, and runs PyTorch inference to predict the next **24 hours of PM2.5**.
 
-## 📂 Project Structure
+4. **MongoDB Atlas**
+   Stores actual streaming data in `streaming_history` and forecasts in `latest_predictions`.
+
+5. **FastAPI & Streamlit**
+   FastAPI provides the backend API for MongoDB data, while Streamlit displays real-time measurements and forecasts.
 
 ```text
-Real-time-Air-Quality-Forecasting-System/
-│
-├── fastapi_app/
-│
+CSV → Kafka → Spark Streaming → PyTorch → MongoDB Atlas → FastAPI → Streamlit
+```
+
+---
+
+## Models & Forecasting
+
+* **Model:** BiLSTM-MLAM (Bidirectional LSTM with Multi-Scale Local Attention Mechanism)
+* **Input:** 48 hours of historical air quality data
+* **Output:** 24-hour PM2.5 forecast
+* **Stations:** 6
+* **Framework:** PyTorch
+* **Scalers:** Scikit-Learn / Joblib
+
+Each station has its own trained model and feature scalers.
+
+---
+
+## Directory Structure
+
+```text
+.
 ├── Docker/
 │   ├── Dockerfile.fastapi
 │   ├── Dockerfile.streamlit
 │   └── docker-compose.yml
-│
 ├── app/
 │   ├── app_dashboard_api.py
 │   ├── config.py
@@ -35,17 +58,14 @@ Real-time-Air-Quality-Forecasting-System/
 │   ├── pytorch_model.py
 │   ├── repository.py
 │   └── schemas.py
-│
 ├── data/
 │   ├── latest_predictions.json
 │   ├── simulation_stream.csv
 │   └── streaming_history.csv
-│
 ├── img/
 │   ├── API.png
 │   ├── Pipeline.png
 │   └── Streamlit.png
-│
 ├── models/
 │   ├── model_48_24_station1.pt
 │   ├── model_48_24_station2.pt
@@ -53,620 +73,109 @@ Real-time-Air-Quality-Forecasting-System/
 │   ├── model_48_24_station4.pt
 │   ├── model_48_24_station5.pt
 │   ├── model_48_24_station6.pt
-│   │
 │   ├── scaler_X_station_1.pkl
-│   ├── scaler_X_station_2.pkl
-│   ├── scaler_X_station_3.pkl
-│   ├── scaler_X_station_4.pkl
-│   ├── scaler_X_station_5.pkl
-│   ├── scaler_X_station_6.pkl
-│   │
-│   ├── scaler_y_station_1.pkl
-│   ├── scaler_y_station_2.pkl
-│   ├── scaler_y_station_3.pkl
-│   ├── scaler_y_station_4.pkl
-│   ├── scaler_y_station_5.pkl
+│   ├── ...
 │   └── scaler_y_station_6.pkl
-│
 ├── spark_kafka/
 │   ├── producer.py
 │   └── spark_consumer_mongodb.py
-│
 ├── .gitignore
 ├── requirements.txt
 ├── LICENSE
 └── README.md
 ```
 
----
+### Directory Description
 
-## ⚙️ Configuration
-
-The system uses environment variables stored in `.env`.
-
-Example:
-
-```env
-MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/
-DATABASE_NAME=air_quality_db
-
-MODEL_DIR=D:\path\to\models
-
-KAFKA_BROKER=localhost:9092
-TOPIC_NAME=air_quality
-DATA_STREAM_FILE=data/simulation_stream.csv
-```
-
-> **Important:** Never commit `.env` to Git. MongoDB credentials and other secrets should be kept private.
-
-The MongoDB database used by the application is:
-
-```text
-air_quality_db
-```
-
-with the following collections:
-
-```text
-streaming_history
-latest_predictions
-```
+* **`Docker/`**: Dockerfiles and Docker Compose configuration for FastAPI and Streamlit.
+* **`app/`**: FastAPI backend, MongoDB repository, inference service, PyTorch model loader, schemas, and Streamlit dashboard.
+* **`data/`**: Simulated streaming data and local prediction/history files.
+* **`img/`**: Architecture and application screenshots.
+* **`models/`**: Pre-trained PyTorch models and Scikit-Learn scalers for 6 stations.
+* **`spark_kafka/`**: Kafka producer and Spark Structured Streaming consumer.
+* **`.env`**: Runtime configuration such as MongoDB, Kafka, and model paths. This file should **not** be committed to Git.
+* **`requirements.txt`**: Python dependencies.
 
 ---
 
-# 🚀 Quick Start Guide
+## Setup & Run
 
-## 1. Prerequisites
-
-Make sure the following software is installed:
-
-* Python 3.10+
-* Java 8 or 11
-* Apache Spark
-* Apache Kafka
-* MongoDB Atlas account
-* Docker Desktop (optional, for containerized deployment)
-
-Verify Python:
-
-```bash
-python --version
-```
-
-Verify Spark:
-
-```bash
-spark-submit --version
-```
-
-Verify Docker:
-
-```bash
-docker --version
-docker compose version
-```
-
----
-
-## 2. Clone the Repository
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/TLsongtam/Real-time-Air-Quality-Forecasting-System-using-PyTorch-Spark-Streaming.git
 cd Real-time-Air-Quality-Forecasting-System-using-PyTorch-Spark-Streaming
 ```
 
----
-
-## 3. Create a Python Environment
-
-Windows:
-
-```powershell
-python -m venv .venv
-.venv\Scripts\activate
-```
-
-Linux/macOS:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-```
-
----
-
-## 4. Install Dependencies
+### 2. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
----
-
-## 5. Configure Environment Variables
-
-Create:
-
-```text
-.env
-```
-
-in the project root.
-
-Example:
+Create `.env` in the project root:
 
 ```env
 MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/
 DATABASE_NAME=air_quality_db
-
-MODEL_DIR=D:\VisualStudio\IE212\DoAn\streaming\fastapi_app\models
+MODEL_DIR=/path/to/models
 
 KAFKA_BROKER=localhost:9092
 TOPIC_NAME=air_quality
 DATA_STREAM_FILE=data/simulation_stream.csv
 ```
 
-Make sure `.env` is included in `.gitignore`.
+### 3. Start Kafka
 
----
-
-# 🔥 Running the Real-Time Pipeline
-
-The recommended execution order is:
-
-```text
-Kafka
-  ↓
-Spark Consumer
-  ↓
-MongoDB Atlas
-  ↓
-FastAPI
-  ↓
-Streamlit
-```
-
-The Kafka producer supplies the data to the Spark consumer:
-
-```text
-simulation_stream.csv
-        ↓
-   Kafka Producer
-        ↓
-   Kafka topic
-    air_quality
-        ↓
-Spark Structured Streaming
-        ↓
- PyTorch BiLSTM-MLAM
-        ↓
-   MongoDB Atlas
-        ↓
-      FastAPI
-        ↓
-    Streamlit
-```
-
----
-
-## Step A: Start Kafka
-
-Start your local Kafka broker and make sure it is listening on:
+Make sure Kafka is running on:
 
 ```text
 localhost:9092
 ```
 
-The Kafka topic used by the project is:
-
-```text
-air_quality
-```
-
----
-
-## Step B: Start the Spark Streaming Consumer
-
-Run:
+### 4. Start Spark Streaming
 
 ```bash
 python spark_kafka/spark_consumer_mongodb.py
 ```
 
-The Spark consumer will:
+### 5. Start the Producer
 
-1. Connect to Kafka.
-2. Consume records from `air_quality`.
-3. Process incoming sensor data.
-4. Maintain a 48-hour history for each station.
-5. Load the corresponding PyTorch model.
-6. Generate 24-hour PM2.5 forecasts.
-7. Save actual measurements to:
-
-```text
-air_quality_db.streaming_history
-```
-
-8. Save the latest predictions to:
-
-```text
-air_quality_db.latest_predictions
-```
-
----
-
-## Step C: Start the Kafka Producer
-
-Open another terminal and run:
+In another terminal:
 
 ```bash
 python spark_kafka/producer.py
 ```
 
-The producer reads:
-
-```text
-data/simulation_stream.csv
-```
-
-and sends records to:
-
-```text
-air_quality
-```
-
-The producer simulates real-time hourly sensor measurements.
-
----
-
-## Step D: Start FastAPI
-
-From the project root:
+### 6. Start FastAPI
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-The API will be available at:
-
-```text
-http://localhost:8000
-```
-
-Interactive Swagger documentation:
+API documentation:
 
 ```text
 http://localhost:8000/docs
 ```
 
-ReDoc:
-
-```text
-http://localhost:8000/redoc
-```
-
-The API retrieves data from MongoDB Atlas through:
-
-```text
-app/repository.py
-```
-
----
-
-## Step E: Start Streamlit
-
-Run:
+### 7. Start Streamlit
 
 ```bash
 streamlit run app/app_dashboard_api.py
 ```
 
-The dashboard will normally be available at:
+Dashboard:
 
 ```text
 http://localhost:8501
 ```
 
-The Streamlit dashboard retrieves data through the FastAPI backend and visualizes the real-time air quality measurements and PM2.5 forecasts.
-
 ---
 
-# 🐳 Docker Deployment
+## MongoDB
 
-The project also provides Docker configurations for the FastAPI backend and Streamlit frontend.
-
-Docker files:
-
-```text
-Docker/
-├── Dockerfile.fastapi
-├── Dockerfile.streamlit
-└── docker-compose.yml
-```
-
-Build and start the services using:
-
-```bash
-docker compose -f Docker/docker-compose.yml up --build
-```
-
-Run in detached mode:
-
-```bash
-docker compose -f Docker/docker-compose.yml up -d --build
-```
-
-Stop the services:
-
-```bash
-docker compose -f Docker/docker-compose.yml down
-```
-
-Check running containers:
-
-```bash
-docker compose -f Docker/docker-compose.yml ps
-```
-
-View logs:
-
-```bash
-docker compose -f Docker/docker-compose.yml logs -f
-```
-
-> Kafka and Spark may still need to be configured separately depending on the Docker Compose configuration and the local development environment.
-
----
-
-# 🤖 Forecasting Pipeline
-
-The forecasting process uses a **48-hour historical window** to predict the next **24 hours of PM2.5 concentrations**.
-
-For each station:
-
-```text
-48 hours historical data
-          ↓
-Data preprocessing
-          ↓
-Feature scaling
-          ↓
-BiLSTM-MLAM model
-          ↓
-Inverse scaling
-          ↓
-24-hour PM2.5 forecast
-```
-
-Six independent models are used:
-
-```text
-Station 1 → model_48_24_station1.pt
-Station 2 → model_48_24_station2.pt
-Station 3 → model_48_24_station3.pt
-Station 4 → model_48_24_station4.pt
-Station 5 → model_48_24_station5.pt
-Station 6 → model_48_24_station6.pt
-```
-
-Each station also has its own input and output scaler:
-
-```text
-scaler_X_station_N.pkl
-scaler_y_station_N.pkl
-```
-
----
-
-# 📊 Monitoring Stations
-
-The system simulates six air quality monitoring stations located in Ho Chi Minh City.
-
-Each station provides measurements for:
-
-| Feature     | Description               |
-| ----------- | ------------------------- |
-| PM2.5       | Fine particulate matter   |
-| TSP         | Total Suspended Particles |
-| O3          | Ozone                     |
-| CO          | Carbon Monoxide           |
-| NO2         | Nitrogen Dioxide          |
-| SO2         | Sulfur Dioxide            |
-| Temperature | Ambient temperature       |
-| Humidity    | Relative humidity         |
-
-The system processes each station independently and produces a station-specific PM2.5 forecast.
-
----
-
-# 🔌 API Overview
-
-The FastAPI service provides endpoints for accessing historical measurements and forecasting results.
-
-API documentation is automatically generated by FastAPI and available at:
-
-```text
-http://localhost:8000/docs
-```
-
-The API architecture follows:
-
-```text
-FastAPI
-   │
-   ├── schemas.py
-   │      └── Request/Response validation
-   │
-   ├── repository.py
-   │      └── MongoDB data access
-   │
-   ├── inference_service.py
-   │      └── Forecasting logic
-   │
-   └── pytorch_model.py
-          └── PyTorch model loading/inference
-```
-
----
-
-# 🗄️ MongoDB Data Model
-
-## `streaming_history`
-
-Stores real-time measurements.
-
-Example:
-
-```json
-{
-    "date": "24-02-2021 16:00",
-    "Station_No": 1,
-    "PM2_5": 15.32,
-    "TSP": 32.48833333,
-    "O3": 56.37081667,
-    "CO": 1467.262,
-    "NO2": 102.9767667,
-    "SO2": 355.8833333,
-    "Temperature": 25.78,
-    "Humidity": 61.42666667
-}
-```
-
-## `latest_predictions`
-
-Stores the latest 24-hour forecasts generated by the inference pipeline.
-
-The API retrieves station-specific predictions from this collection.
-
----
-
-# 🖥️ Dashboard
-
-The Streamlit dashboard provides real-time monitoring of the system.
-
-Main visualization components include:
-
-* Station selection.
-* Historical PM2.5 measurements.
-* Real-time air quality indicators.
-* 24-hour PM2.5 forecast.
-* Actual vs predicted PM2.5 curves.
-* Interactive Plotly charts.
-
-The dashboard communicates with FastAPI instead of accessing MongoDB directly.
-
-```text
-Streamlit
-    ↓
-FastAPI
-    ↓
-MongoDB Atlas
-```
-
-This separation keeps database access inside the backend layer.
-
----
-
-# 🔄 End-to-End Data Flow
-
-```text
-simulation_stream.csv
-        │
-        ▼
-┌───────────────────┐
-│   Kafka Producer  │
-└─────────┬─────────┘
-          │
-          ▼
-   Kafka: air_quality
-          │
-          ▼
-┌─────────────────────────────┐
-│ Apache Spark Structured     │
-│ Streaming                   │
-└─────────────┬───────────────┘
-              │
-              ▼
-     48-hour history window
-              │
-              ▼
-┌─────────────────────────────┐
-│ PyTorch BiLSTM-MLAM Models  │
-│ Station 1 → Station 6       │
-└─────────────┬───────────────┘
-              │
-              ▼
-       24-hour PM2.5
-          forecast
-              │
-              ▼
-┌─────────────────────────────┐
-│       MongoDB Atlas         │
-│                             │
-│ streaming_history           │
-│ latest_predictions          │
-└─────────────┬───────────────┘
-              │
-              ▼
-          FastAPI
-              │
-              ▼
-         Streamlit
-              │
-              ▼
-      Interactive Dashboard
-```
-
----
-
-# 🧪 Local Development
-
-For development, the recommended terminal setup is:
-
-### Terminal 1 — Kafka
-
-```bash
-# Start Kafka broker
-```
-
-### Terminal 2 — Spark Consumer
-
-```bash
-python spark_kafka/spark_consumer_mongodb.py
-```
-
-### Terminal 3 — Kafka Producer
-
-```bash
-python spark_kafka/producer.py
-```
-
-### Terminal 4 — FastAPI
-
-```bash
-uvicorn app.main:app --reload
-```
-
-### Terminal 5 — Streamlit
-
-```bash
-streamlit run app/app_dashboard_api.py
-```
-
----
-
-# ⚠️ Troubleshooting
-
-## MongoDB connection error
-
-Make sure `.env` contains:
-
-```env
-MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/
-DATABASE_NAME=air_quality_db
-```
-
-The application uses:
+The application uses MongoDB Atlas with:
 
 ```text
 air_quality_db
@@ -674,99 +183,26 @@ air_quality_db
 └── latest_predictions
 ```
 
-If the API returns no data, verify that the streaming process and API use the same MongoDB URI and database name.
+`streaming_history` stores real-time sensor measurements, while `latest_predictions` stores the latest 24-hour PM2.5 forecasts.
 
 ---
 
-## Kafka connection error
+## Docker
 
-Verify Kafka is running on:
+To run the FastAPI and Streamlit services with Docker:
 
-```text
-localhost:9092
+```bash
+docker compose -f Docker/docker-compose.yml up --build
 ```
 
-Check the configured topic:
+Stop services:
 
-```text
-air_quality
-```
-
----
-
-## Forecast not generated
-
-The forecasting model requires:
-
-```text
-48 hours of historical data
-```
-
-for a station before generating the next:
-
-```text
-24-hour PM2.5 forecast
-```
-
-If the system reports:
-
-```text
-Station X chưa đủ 48h dữ liệu
-```
-
-continue the streaming process until enough historical records are available.
-
----
-
-## Model not found
-
-Verify that all model and scaler files exist under:
-
-```text
-models/
-```
-
-Required files for each station:
-
-```text
-model_48_24_stationN.pt
-scaler_X_station_N.pkl
-scaler_y_station_N.pkl
+```bash
+docker compose -f Docker/docker-compose.yml down
 ```
 
 ---
 
-# 🔐 Security
+## Conclusion
 
-Never commit sensitive credentials to Git.
-
-The following files should remain private:
-
-```text
-.env
-```
-
-Do not expose:
-
-* MongoDB username
-* MongoDB password
-* MongoDB connection URI
-* API keys
-* Cloud credentials
-
-Use `.gitignore` to exclude environment files:
-
-```gitignore
-.env
-.venv/
-__pycache__/
-*.pyc
-```
-
----
-
-# 📜 License
-
-This project is developed for academic purposes as part of the **IE212 — Online Stream Data Analysis** course.
-
-See [`LICENSE`](LICENSE) for the full license information.
+This project demonstrates an end-to-end **real-time streaming ML pipeline** combining Kafka, Spark Structured Streaming, PyTorch, MongoDB Atlas, FastAPI, and Streamlit for real-time air quality monitoring and 24-hour PM2.5 forecasting.
