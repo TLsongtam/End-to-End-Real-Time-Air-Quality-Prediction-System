@@ -7,7 +7,7 @@ The system simulates air quality data from **6 stations in Ho Chi Minh City**, s
 ---
 
 ## Architecture
-
+![Pipeline](fastapi_app/img/Pipeline.png)
 1. **Data Producer**
    `spark_kafka/producer.py` reads simulated air quality data and sends records to the `air_quality` Kafka topic.
 
