@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+pymongo
+pydantic
+pydantic-settings
+python-dotenv
+torch
+scikit-learn
+joblib
+numpy
+pandas
+requests
+streamlit
+streamlit-autorefresh
+plotly

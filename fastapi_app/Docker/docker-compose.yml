@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  fastapi-backend:
+    build:
+      context: ..
+      dockerfile: Docker/Dockerfile.fastapi
+    container_name: air_quality_backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../.env
+    restart: always
+
+  streamlit-frontend:
+    build:
+      context: ..
+      dockerfile: Docker/Dockerfile.streamlit
+    container_name: air_quality_frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - FASTAPI_URL=http://fastapi-backend:8000/api/v1
+    depends_on:
+      - fastapi-backend
+    restart: always
